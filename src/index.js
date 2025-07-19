@@ -1,79 +1,104 @@
-const express = require('express');
-const cors = require('cors');
+const { Client, GatewayIntentBits, Collection, EmbedBuilder } = require('discord.js');
 const config = require('../config');
+const database = require('./services/database');
 const leetcodeService = require('./services/leetcodeService');
-const dataService = require('./services/dataService');
+const weeklyUpdate = require('./services/weeklyUpdate');
 
-const app = express();
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-
-// Routes
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'LeetCode Bot Backend is running' });
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers
+  ]
 });
 
-app.get('/api/user/:username/recent-problems', async (req, res) => {
+client.commands = new Collection();
+
+// Load commands
+const fs = require('fs');
+const path = require('path');
+const commandsPath = path.join(__dirname, 'commands');
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+
+for (const file of commandFiles) {
+  const filePath = path.join(commandsPath, file);
+  const command = require(filePath);
+  if ('data' in command && 'execute' in command) {
+    client.commands.set(command.data.name, command);
+  }
+}
+
+// Bot ready event
+client.once('ready', async () => {
+  console.log(`🤖 Discord Bot logged in as ${client.user.tag}`);
+  
+  // Initialize database
+  await database.init();
+  console.log('📊 Database initialized');
+  
+  // Register slash commands
+  await registerCommands();
+  console.log('⚡ Slash commands registered');
+  
+  // Start weekly update scheduler
+  weeklyUpdate.start(client);
+  console.log('📅 Weekly update scheduler started');
+});
+
+// Interaction handler
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isChatInputCommand()) return;
+
+  const command = client.commands.get(interaction.commandName);
+  if (!command) return;
+
   try {
-    const { username } = req.params;
-    const { days = 7 } = req.query;
-    
-    console.log(`Fetching recent problems for user: ${username} (last ${days} days)`);
-    
-    const problems = await leetcodeService.getRecentSolvedProblems(username, parseInt(days));
-    
-    // Store the data
-    await dataService.storeUserProblems(username, problems);
-    
-    res.json({
-      success: true,
-      username,
-      problemsCount: problems.length,
-      problems,
-      timestamp: new Date().toISOString()
-    });
+    await command.execute(interaction);
   } catch (error) {
-    console.error('Error fetching recent problems:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    console.error(`Error executing command ${interaction.commandName}:`, error);
+    
+    const errorMessage = 'There was an error while executing this command!';
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp({ content: errorMessage, ephemeral: true });
+    } else {
+      await interaction.reply({ content: errorMessage, ephemeral: true });
+    }
   }
 });
 
-app.get('/api/user/:username/stored-data', async (req, res) => {
-  try {
-    const { username } = req.params;
-    const data = await dataService.getStoredUserProblems(username);
-    
-    res.json({
-      success: true,
-      username,
-      data
-    });
-  } catch (error) {
-    console.error('Error retrieving stored data:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+// Register slash commands
+async function registerCommands() {
+  const { REST, Routes } = require('discord.js');
+  const rest = new REST({ version: '10' }).setToken(config.DISCORD_TOKEN);
+
+  const commands = [];
+  for (const command of client.commands.values()) {
+    commands.push(command.data.toJSON());
   }
+
+  try {
+    console.log('Started refreshing application (/) commands.');
+
+    await rest.put(
+      Routes.applicationGuildCommands(config.CLIENT_ID, config.GUILD_ID),
+      { body: commands }
+    );
+
+    console.log('Successfully reloaded application (/) commands.');
+  } catch (error) {
+    console.error('Error registering commands:', error);
+  }
+}
+
+// Error handling
+client.on('error', error => {
+  console.error('Discord client error:', error);
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    success: false,
-    error: 'Something went wrong!'
-  });
+process.on('unhandledRejection', error => {
+  console.error('Unhandled promise rejection:', error);
 });
 
-// Start server
-app.listen(config.PORT, () => {
-  console.log(`🚀 LeetCode Bot Backend running on port ${config.PORT}`);
-  console.log(`📁 Data will be stored in: ${config.DATA_FOLDER}`);
-  console.log(`🌐 Health check: http://localhost:${config.PORT}/api/health`);
-}); 
+// Login
+client.login(config.DISCORD_TOKEN); 

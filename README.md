@@ -1,168 +1,196 @@
-# LeetCode Bot Backend
+# LeetCode Discord Bot
 
-A Node.js backend service that fetches users' recent solved problems from LeetCode's GraphQL API and stores the data in organized folders.
+A Discord bot that integrates with the LeetCode backend to track user progress and send weekly updates.
 
-## Quick Start
+## Features
+
+- 🤖 **Discord Integration**: Slash commands for user registration and management
+- 📊 **Weekly Updates**: Automated weekly progress reports with rankings
+- 🗄️ **SQLite Database**: User registration and statistics storage
+- 🔄 **Backend Integration**: Connects to the LeetCode API backend
+- ⏰ **Scheduled Updates**: Cron-based weekly update scheduling
+
+## Commands
+
+### `/register <leetcode_username>`
+Register your LeetCode username for weekly tracking.
+
+### `/profile`
+View your current registration and recent activity.
+
+### `/unregister`
+Remove your registration from the tracking system.
+
+### `/testupdate` (Admin only)
+Trigger a test weekly update for testing purposes.
+
+## Setup
 
 ### Prerequisites
 
-- Node.js (v14 or higher)
-- npm or yarn
+1. **Discord Bot Token**: Create a Discord application and bot at [Discord Developer Portal](https://discord.com/developers/applications)
+2. **LeetCode Backend**: Ensure the LeetCode backend is running on `http://localhost:3000`
+3. **Node.js**: Version 14 or higher
 
 ### Installation
 
-1. Clone or download the project
-2. Install dependencies:
+1. **Install dependencies**:
    ```bash
    npm install
    ```
 
-3. Start the server:
+2. **Create environment file**:
+   Create a `.env` file in the root directory:
+   ```env
+   DISCORD_TOKEN=your_discord_bot_token
+   CLIENT_ID=your_discord_client_id
+   GUILD_ID=your_discord_server_id
+   CHANNEL_ID=your_discord_channel_id
+   LEETCODE_API_URL=http://localhost:3000/api
+   DATABASE_PATH=./data/users.db
+   WEEKLY_UPDATE_CRON=0 9 * * 1
+   UPDATE_TIMEZONE=America/New_York
+   ```
+
+3. **Start the bot**:
    ```bash
    npm start
    ```
 
-   Or for development with auto-restart:
-   ```bash
-   npm run dev
-   ```
+### Discord Bot Setup
 
-The server will start on `http://localhost:3000`
+1. **Create Discord Application**:
+   - Go to [Discord Developer Portal](https://discord.com/developers/applications)
+   - Create a new application
+   - Go to the "Bot" section and create a bot
+   - Copy the bot token
 
-## API Endpoints
+2. **Invite Bot to Server**:
+   - Go to OAuth2 > URL Generator
+   - Select "bot" scope
+   - Select permissions: Send Messages, Use Slash Commands, Read Message History
+   - Use the generated URL to invite the bot
 
-### Health Check
-```
-GET /api/health
-```
-Returns server status.
-
-### Fetch Recent Problems
-```
-GET /api/user/:username/recent-problems?days=7
-```
-
-**Parameters:**
-- `username` (path): LeetCode username
-- `days` (query, optional): Number of days to look back (default: 7)
-
-**Example:**
-```bash
-curl "http://localhost:3000/api/user/johndoe/recent-problems?days=7"
-```
-
-### Get Stored Data
-```
-GET /api/user/:username/stored-data
-```
-
-**Example:**
-```bash
-curl "http://localhost:3000/api/user/johndoe/stored-data"
-```
-
-## Data Storage Structure
-
-The backend stores data in the following structure:
-
-```
-data/
-├── username1/
-│   ├── recent_problems_2024-01-15_14-30-25.json
-│   ├── recent_problems_2024-01-16_09-15-10.json
-│   ├── latest.json
-│   └── summary.json
-├── username2/
-│   ├── recent_problems_2024-01-15_16-45-30.json
-│   ├── latest.json
-│   └── summary.json
-```
-
-### File Types
-
-- **`recent_problems_YYYY-MM-DD_HH-mm-ss.json`**: Timestamped data files
-- **`latest.json`**: Most recent data for quick access
-- **`summary.json`**: Aggregated statistics and metadata
+3. **Get Server and Channel IDs**:
+   - Enable Developer Mode in Discord
+   - Right-click on your server and channel to copy IDs
 
 ## Configuration
 
-Create a `.env` file in the root directory:
+### Environment Variables
 
-```env
-PORT=3000
-LEETCODE_API_URL=https://leetcode.com/graphql
-DATA_FOLDER=./data
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DISCORD_TOKEN` | Discord bot token | Required |
+| `CLIENT_ID` | Discord application client ID | Required |
+| `GUILD_ID` | Discord server ID | Required |
+| `CHANNEL_ID` | Discord channel for weekly updates | Required |
+| `LEETCODE_API_URL` | LeetCode backend API URL | `http://localhost:3000/api` |
+| `DATABASE_PATH` | SQLite database file path | `./data/users.db` |
+| `WEEKLY_UPDATE_CRON` | Cron schedule for weekly updates | `0 9 * * 1` |
+| `UPDATE_TIMEZONE` | Timezone for updates | `America/New_York` |
+
+### Weekly Update Schedule
+
+The bot sends weekly updates every Monday at 9 AM by default. You can customize this using the `WEEKLY_UPDATE_CRON` environment variable.
+
+Examples:
+- `0 9 * * 1` - Every Monday at 9 AM
+- `0 18 * * 5` - Every Friday at 6 PM
+- `0 12 * * 0` - Every Sunday at 12 PM
+
+## Database Schema
+
+### Users Table
+```sql
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  discord_id TEXT UNIQUE NOT NULL,
+  discord_username TEXT NOT NULL,
+  leetcode_username TEXT UNIQUE NOT NULL,
+  registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+  is_active BOOLEAN DEFAULT 1
+);
 ```
 
-## Example Response
-
-```json
-{
-  "success": true,
-  "username": "johndoe",
-  "problemsCount": 5,
-  "problems": [
-    {
-      "id": 1,
-      "title": "Two Sum",
-      "titleSlug": "two-sum",
-      "difficulty": "Easy",
-      "categoryTitle": "Array",
-      "status": "accepted",
-      "timestamp": 1705312800,
-      "timeAgo": "2 days ago",
-      "fetchedAt": "2024-01-15T14:30:25.123Z",
-      "dateRange": {
-        "start": "2024-01-08",
-        "end": "2024-01-15"
-      }
-    }
-  ],
-  "timestamp": "2024-01-15T14:30:25.123Z"
-}
+### Weekly Stats Table
+```sql
+CREATE TABLE weekly_stats (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  week_start DATE NOT NULL,
+  problems_solved INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users (id),
+  UNIQUE(user_id, week_start)
+);
 ```
+
+## Weekly Update Format
+
+The bot sends weekly updates with:
+- 🏆 **Weekly Rankings**: Users ranked by problems solved
+- 📈 **Summary**: Total problems solved and active users
+- 🥇 **Medals**: Gold, silver, bronze for top 3 users
 
 ## Development
 
 ### Project Structure
-
 ```
-src/
-├── index.js              # Main Express server
-└── services/
-    ├── leetcodeService.js # LeetCode API integration
-    └── dataService.js     # Data storage and retrieval
+leetcodeDiscordBot/
+├── .gitignore              # Git ignore rules
+├── config.js               # Bot configuration
+├── package.json            # Dependencies and scripts
+├── package-lock.json       # Locked dependencies
+├── README.md               # Documentation
+├── test-bot.js             # Test script
+└── src/
+    ├── index.js            # Main Discord bot
+    ├── commands/           # Discord slash commands
+    │   ├── register.js
+    │   ├── profile.js
+    │   ├── unregister.js
+    │   └── testupdate.js
+    └── services/           # Business logic
+        ├── database.js     # SQLite database operations
+        ├── leetcodeService.js # LeetCode API integration
+        └── weeklyUpdate.js # Weekly update logic
 ```
 
-### Adding New Features
+### Adding New Commands
 
-1. **New API Endpoints**: Add routes in `src/index.js`
-2. **GraphQL Queries**: Extend `src/services/leetcodeService.js`
-3. **Data Processing**: Modify `src/services/dataService.js`
+1. Create a new file in `src/commands/`
+2. Export an object with `data` (SlashCommandBuilder) and `execute` function
+3. The bot will automatically load the command
+
+### Testing
+
+```bash
+# Run in development mode
+npm run dev
+
+# Test weekly update
+# Use /testupdate command in Discord (Admin only)
+```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **"User not found"**: Check if the LeetCode username is correct
-2. **"No data returned"**: User might have a private profile
-3. **Network errors**: Check internet connection and LeetCode API status
+1. **Bot not responding**: Check if the bot token is correct and has proper permissions
+2. **Commands not showing**: Ensure the bot has been invited with proper scopes
+3. **Weekly updates not sending**: Check the channel ID and bot permissions
+4. **Database errors**: Ensure the data directory exists and is writable
 
-### Debug Mode
+### Logs
 
-Enable detailed logging by setting the environment variable:
-```bash
-DEBUG=* npm start
-```
+The bot provides detailed console logs for debugging:
+- User registration attempts
+- LeetCode API calls
+- Weekly update processing
+- Database operations
 
-## Contributing
+## License
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
----
-
-**Note**: This backend uses LeetCode's public GraphQL API. Please respect their terms of service and rate limits. 
+MIT License - feel free to use and modify as needed. 
