@@ -1,0 +1,26 @@
+{
+  "name": "leetcode-bot",
+  "version": "1.0.0",
+  "description": "Backend to fetch LeetCode user's recent solved problems",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "fs-extra": "^11.1.1",
+    "moment": "^2.29.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "jest": "^29.7.0"
+  },
+  "keywords": ["leetcode", "graphql", "api", "backend"],
+  "author": "",
+  "license": "MIT"
+} 
