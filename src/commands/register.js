@@ -7,6 +7,10 @@ module.exports = {
     .setName('register')
     .setDescription('Register your LeetCode username for weekly updates')
     .addStringOption(option =>
+      option.setName('name')
+        .setDescription('Your display name (how you want to appear in updates)')
+        .setRequired(true))
+    .addStringOption(option =>
       option.setName('leetcode_username')
         .setDescription('Your LeetCode username')
         .setRequired(true)),
@@ -15,6 +19,7 @@ module.exports = {
     await interaction.deferReply({ ephemeral: true });
 
     try {
+      const displayName = interaction.options.getString('name');
       const leetcodeUsername = interaction.options.getString('leetcode_username');
       const discordId = interaction.user.id;
       const discordUsername = interaction.user.username;
@@ -63,11 +68,11 @@ module.exports = {
       }
 
       // Register the user
-      await database.registerUser(discordId, discordUsername, leetcodeUsername);
+      await database.registerUser(discordId, discordUsername, displayName, leetcodeUsername);
 
       const embed = new EmbedBuilder()
         .setTitle('✅ Registration Successful')
-        .setDescription(`You have been successfully registered!\n\n**Discord:** ${discordUsername}\n**LeetCode:** ${leetcodeUsername}`)
+        .setDescription(`You have been successfully registered!\n\n**Display Name:** ${displayName}\n**LeetCode:** ${leetcodeUsername}`)
         .setColor('#00ff00')
         .setTimestamp()
         .addFields({
@@ -78,7 +83,7 @@ module.exports = {
 
       await interaction.editReply({ embeds: [embed] });
 
-      console.log(`✅ User registered successfully: ${discordUsername} -> ${leetcodeUsername}`);
+      console.log(`✅ User registered successfully: ${displayName} (${leetcodeUsername})`);
 
     } catch (error) {
       console.error('Error in register command:', error);

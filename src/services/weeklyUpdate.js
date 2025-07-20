@@ -65,7 +65,7 @@ class WeeklyUpdate {
             totalProblems += problemsSolved;
             
             userStats.push({
-              discordUsername: user.discord_username,
+              displayName: user.display_name,
               leetcodeUsername: user.leetcode_username,
               problemsSolved: problemsSolved,
               problems: result.problems
@@ -88,7 +88,7 @@ class WeeklyUpdate {
         } catch (error) {
           console.error(`Error processing user ${user.discord_username}:`, error);
           userStats.push({
-            discordUsername: user.discord_username,
+            displayName: user.display_name,
             leetcodeUsername: user.leetcode_username,
             problemsSolved: 0,
             problems: []
@@ -127,7 +127,7 @@ class WeeklyUpdate {
 
       for (const stat of sortedStats) {
         const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '📊';
-        userList += `${medal} **${stat.discordUsername}** (${stat.leetcodeUsername})\n`;
+        userList += `${medal} **${stat.displayName}** (${stat.leetcodeUsername})\n`;
         userList += `   Solved: **${stat.problemsSolved}** problems\n\n`;
         rank++;
       }
