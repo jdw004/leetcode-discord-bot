@@ -129,7 +129,7 @@ leetcodeDiscordBot/
 ### Common Issues
 
 1. **Bot not responding**: Check if the bot token is correct and has proper permissions
-2. **Commands not showing**: Ensure the bot has been invited with proper scopes
+2. **Commands not showing**: Ensure the bot has been invited with correct scopes
 3. **Weekly updates not sending**: Check the channel ID and bot permissions
 4. **Database errors**: Ensure the data directory exists and is writable
 
