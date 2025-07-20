@@ -47,8 +47,8 @@ class WeeklyUpdate {
 
       console.log(`📊 Processing ${users.length} users for weekly update`);
 
-      const weekStart = moment().startOf('week').format('YYYY-MM-DD');
-      const weekEnd = moment().endOf('week').format('YYYY-MM-DD');
+      const weekEnd = moment().format('YYYY-MM-DD');
+      const weekStart = moment().subtract(6, 'days').format('YYYY-MM-DD');
       
       const userStats = [];
       let totalProblems = 0;

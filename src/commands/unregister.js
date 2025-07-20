@@ -24,8 +24,8 @@ module.exports = {
         return;
       }
 
-      // Deactivate the user
-      await database.deactivateUser(discordId);
+      // Delete the user
+      await database.deleteUser(discordId);
 
       const embed = new EmbedBuilder()
         .setTitle('✅ Unregistered Successfully')
