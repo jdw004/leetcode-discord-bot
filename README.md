@@ -1,6 +1,6 @@
 # LeetCode Discord Bot
 
-A Discord bot that integrates with the LeetCode backend to track user progress and send weekly updates.
+A Discord bot that integrates with the LeetCode backend to track user progress and send weekly updates. **Deployed on Heroku for 24/7 uptime.**
 
 ## Features
 
@@ -171,45 +171,6 @@ The bot sends weekly updates with:
    ```
 
 The `DATABASE_URL` will be automatically set by Heroku when you add the PostgreSQL addon.
-
-### Migrating from SQLite (if you have existing data)
-
-If you have existing data in SQLite and want to migrate to PostgreSQL:
-
-1. **Install sqlite3 temporarily**:
-   ```bash
-   npm install sqlite3
-   ```
-
-2. **Run the migration script**:
-   ```bash
-   npm run migrate
-   ```
-
-3. **Remove sqlite3**:
-   ```bash
-   npm uninstall sqlite3
-   ```
-
-### Testing Database Connection
-
-To test your PostgreSQL connection:
-
-```bash
-npm run test-db
-```
-
-This will test the database connection, table creation, and basic operations.
-
-### Database Migrations
-
-If you're updating an existing database with the new display name feature:
-
-```bash
-npm run migrate-display-name
-```
-
-This will add the `display_name` column to existing user tables.
 
 ## Development
 ```
