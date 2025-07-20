@@ -1,142 +1,91 @@
 const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const { Pool } = require('pg');
+require('dotenv').config();
 
-// Database path
-const dbPath = './leetcodeBot.db';
+// SQLite connection
+const sqliteDb = new sqlite3.Database('./data/users.db');
 
-async function migrateDatabase() {
-  return new Promise((resolve, reject) => {
-    const db = new sqlite3.Database(dbPath, (err) => {
-      if (err) {
-        console.error('Error opening database:', err);
-        reject(err);
-        return;
-      }
-      console.log('Connected to database for migration');
-    });
+// PostgreSQL connection
+const pgPool = new Pool({
+  connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/leetcode_bot',
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
-    // Start transaction
-    db.serialize(() => {
-      db.run('BEGIN TRANSACTION');
+async function migrateData() {
+  try {
+    console.log('Starting migration from SQLite to PostgreSQL...');
 
-      // Create new users table with correct schema
-      const createNewUsersTable = `
-        CREATE TABLE users_new (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          discord_id TEXT UNIQUE NOT NULL,
-          discord_username TEXT NOT NULL,
-          leetcode_username TEXT UNIQUE NOT NULL,
-          registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `;
-
-      db.run(createNewUsersTable, function(err) {
-        if (err) {
-          console.error('Error creating new users table:', err);
-          db.run('ROLLBACK');
-          db.close();
-          reject(err);
-          return;
-        }
-        console.log('Created new users table');
-
-        // Copy data from old table to new table
-        const copyData = `
-          INSERT INTO users_new (discord_id, leetcode_username, registered_at, last_updated)
-          SELECT discord_id, leetcode_username, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-          FROM users
-        `;
-
-        db.run(copyData, function(err) {
-          if (err) {
-            console.error('Error copying data:', err);
-            db.run('ROLLBACK');
-            db.close();
-            reject(err);
-            return;
-          }
-          console.log('Copied data from old table');
-
-          // Drop old table
-          db.run('DROP TABLE users', function(err) {
-            if (err) {
-              console.error('Error dropping old table:', err);
-              db.run('ROLLBACK');
-              db.close();
-              reject(err);
-              return;
-            }
-            console.log('Dropped old users table');
-
-            // Rename new table to users
-            db.run('ALTER TABLE users_new RENAME TO users', function(err) {
-              if (err) {
-                console.error('Error renaming table:', err);
-                db.run('ROLLBACK');
-                db.close();
-                reject(err);
-                return;
-              }
-              console.log('Renamed new table to users');
-
-              // Create weekly_stats table
-              const createWeeklyStatsTable = `
-                CREATE TABLE IF NOT EXISTS weekly_stats (
-                  id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  user_id INTEGER NOT NULL,
-                  week_start DATE NOT NULL,
-                  problems_solved INTEGER DEFAULT 0,
-                  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                  FOREIGN KEY (user_id) REFERENCES users (id),
-                  UNIQUE(user_id, week_start)
-                )
-              `;
-
-              db.run(createWeeklyStatsTable, function(err) {
-                if (err) {
-                  console.error('Error creating weekly_stats table:', err);
-                  db.run('ROLLBACK');
-                  db.close();
-                  reject(err);
-                  return;
-                }
-                console.log('Created weekly_stats table');
-
-                // Commit transaction
-                db.run('COMMIT', function(err) {
-                  if (err) {
-                    console.error('Error committing transaction:', err);
-                    db.close();
-                    reject(err);
-                  } else {
-                    console.log('✅ Database migration completed successfully!');
-                    db.close((closeErr) => {
-                      if (closeErr) {
-                        console.error('Error closing database:', closeErr);
-                      } else {
-                        console.log('Database connection closed');
-                      }
-                      resolve();
-                    });
-                  }
-                });
-              });
-            });
-          });
-        });
+    // Get all users from SQLite
+    const users = await new Promise((resolve, reject) => {
+      sqliteDb.all('SELECT * FROM users', (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
       });
     });
-  });
+
+    console.log(`Found ${users.length} users to migrate`);
+
+    // Get all weekly stats from SQLite
+    const weeklyStats = await new Promise((resolve, reject) => {
+      sqliteDb.all('SELECT * FROM weekly_stats', (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+
+    console.log(`Found ${weeklyStats.length} weekly stats to migrate`);
+
+    // Migrate users
+    for (const user of users) {
+      const query = `
+        INSERT INTO users (discord_id, discord_username, display_name, leetcode_username, registered_at, last_updated, is_active)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (discord_id) DO NOTHING
+      `;
+      
+      await pgPool.query(query, [
+        user.discord_id,
+        user.discord_username,
+        user.display_name || user.discord_username, // Use discord_username as fallback for display_name
+        user.leetcode_username,
+        user.registered_at,
+        user.last_updated,
+        user.is_active || true
+      ]);
+    }
+
+    console.log('Users migrated successfully');
+
+    // Migrate weekly stats
+    for (const stat of weeklyStats) {
+      const query = `
+        INSERT INTO weekly_stats (user_id, week_start, problems_solved, created_at)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (user_id, week_start) DO NOTHING
+      `;
+      
+      await pgPool.query(query, [
+        stat.user_id,
+        stat.week_start,
+        stat.problems_solved,
+        stat.created_at
+      ]);
+    }
+
+    console.log('Weekly stats migrated successfully');
+    console.log('Migration completed successfully!');
+
+  } catch (error) {
+    console.error('Migration failed:', error);
+  } finally {
+    sqliteDb.close();
+    await pgPool.end();
+  }
 }
 
-// Run migration
-migrateDatabase()
-  .then(() => {
-    console.log('Migration completed successfully');
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error('Migration failed:', error);
-    process.exit(1);
-  }); 
+// Run migration if this script is executed directly
+if (require.main === module) {
+  migrateData();
+}
+
+module.exports = { migrateData }; 

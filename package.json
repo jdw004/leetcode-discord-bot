@@ -6,14 +6,17 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "jest"
+    "test": "jest",
+    "migrate": "node migrate-database.js",
+    "migrate-display-name": "node add-display-name-column.js",
+    "test-db": "node test-database.js"
   },
   "dependencies": {
     "discord.js": "^14.14.1",
     "axios": "^1.6.0",
     "dotenv": "^16.3.1",
     "node-cron": "^3.0.3",
-    "sqlite3": "^5.1.6",
+    "pg": "^8.11.3",
     "moment": "^2.29.4"
   },
   "devDependencies": {

@@ -6,14 +6,14 @@ A Discord bot that integrates with the LeetCode backend to track user progress a
 
 - 🤖 **Discord Integration**: Slash commands for user registration and management
 - 📊 **Weekly Updates**: Automated weekly progress reports with rankings
-- 🗄️ **SQLite Database**: User registration and statistics storage
+- 🗄️ **PostgreSQL Database**: User registration and statistics storage
 - 🔄 **Backend Integration**: Connects to the LeetCode API backend
 - ⏰ **Scheduled Updates**: Cron-based weekly update scheduling
 
 ## Commands
 
-### `/register <leetcode_username>`
-Register your LeetCode username for weekly tracking.
+### `/register <name> <leetcode_username>`
+Register your LeetCode username for weekly tracking. The name will be displayed in weekly updates.
 
 ### `/profile`
 View your current registration and recent activity.
@@ -30,7 +30,8 @@ Trigger a test weekly update for testing purposes.
 
 1. **Discord Bot Token**: Create a Discord application and bot at [Discord Developer Portal](https://discord.com/developers/applications)
 2. **LeetCode Backend**: Ensure the LeetCode backend is running on `http://localhost:3000`
-3. **Node.js**: Version 14 or higher
+3. **PostgreSQL Database**: Local PostgreSQL installation or Heroku Postgres addon
+4. **Node.js**: Version 14 or higher
 
 ### Installation
 
@@ -47,7 +48,7 @@ Trigger a test weekly update for testing purposes.
    GUILD_ID=your_discord_server_id
    CHANNEL_ID=your_discord_channel_id
    LEETCODE_API_URL=http://localhost:3000/api
-   DATABASE_PATH=./data/users.db
+   DATABASE_URL=postgresql://username:password@localhost:5432/leetcode_bot
    WEEKLY_UPDATE_CRON=0 9 * * 1
    UPDATE_TIMEZONE=America/New_York
    ```
@@ -86,7 +87,7 @@ Trigger a test weekly update for testing purposes.
 | `GUILD_ID` | Discord server ID | Required |
 | `CHANNEL_ID` | Discord channel for weekly updates | Required |
 | `LEETCODE_API_URL` | LeetCode backend API URL | `http://localhost:3000/api` |
-| `DATABASE_PATH` | SQLite database file path | `./data/users.db` |
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://localhost:5432/leetcode_bot` |
 | `WEEKLY_UPDATE_CRON` | Cron schedule for weekly updates | `0 9 * * 1` |
 | `UPDATE_TIMEZONE` | Timezone for updates | `America/New_York` |
 
@@ -104,25 +105,26 @@ Examples:
 ### Users Table
 ```sql
 CREATE TABLE users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   discord_id TEXT UNIQUE NOT NULL,
   discord_username TEXT NOT NULL,
+  display_name TEXT NOT NULL,
   leetcode_username TEXT UNIQUE NOT NULL,
-  registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
-  is_active BOOLEAN DEFAULT 1
+  registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  is_active BOOLEAN DEFAULT TRUE
 );
 ```
 
 ### Weekly Stats Table
 ```sql
 CREATE TABLE weekly_stats (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL,
   week_start DATE NOT NULL,
   problems_solved INTEGER DEFAULT 0,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users (id),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
   UNIQUE(user_id, week_start)
 );
 ```
@@ -134,9 +136,82 @@ The bot sends weekly updates with:
 - 📈 **Summary**: Total problems solved and active users
 - 🥇 **Medals**: Gold, silver, bronze for top 3 users
 
-## Development
+## Heroku Deployment
 
-### Project Structure
+### Setup for Heroku
+
+1. **Create Heroku App**:
+   ```bash
+   heroku create your-app-name
+   ```
+
+2. **Add PostgreSQL Addon**:
+   ```bash
+   heroku addons:create heroku-postgresql:mini
+   ```
+
+3. **Set Environment Variables**:
+   ```bash
+   heroku config:set DISCORD_TOKEN=your_discord_bot_token
+   heroku config:set CLIENT_ID=your_discord_client_id
+   heroku config:set GUILD_ID=your_discord_server_id
+   heroku config:set CHANNEL_ID=your_discord_channel_id
+   heroku config:set LEETCODE_API_URL=your_leetcode_backend_url
+   heroku config:set NODE_ENV=production
+   ```
+
+4. **Deploy**:
+   ```bash
+   git push heroku main
+   ```
+
+5. **Start the Dyno**:
+   ```bash
+   heroku ps:scale web=1
+   ```
+
+The `DATABASE_URL` will be automatically set by Heroku when you add the PostgreSQL addon.
+
+### Migrating from SQLite (if you have existing data)
+
+If you have existing data in SQLite and want to migrate to PostgreSQL:
+
+1. **Install sqlite3 temporarily**:
+   ```bash
+   npm install sqlite3
+   ```
+
+2. **Run the migration script**:
+   ```bash
+   npm run migrate
+   ```
+
+3. **Remove sqlite3**:
+   ```bash
+   npm uninstall sqlite3
+   ```
+
+### Testing Database Connection
+
+To test your PostgreSQL connection:
+
+```bash
+npm run test-db
+```
+
+This will test the database connection, table creation, and basic operations.
+
+### Database Migrations
+
+If you're updating an existing database with the new display name feature:
+
+```bash
+npm run migrate-display-name
+```
+
+This will add the `display_name` column to existing user tables.
+
+## Development
 ```
 leetcodeDiscordBot/
 ├── .gitignore              # Git ignore rules
