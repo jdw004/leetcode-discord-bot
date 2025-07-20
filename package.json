@@ -9,7 +9,8 @@
     "test": "jest",
     "migrate": "node migrate-database.js",
     "migrate-display-name": "node add-display-name-column.js",
-    "test-db": "node test-database.js"
+    "test-db": "node test-database.js",
+    "register-commands": "node register-commands.js"
   },
   "dependencies": {
     "discord.js": "^14.14.1",

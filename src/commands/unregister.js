@@ -29,7 +29,7 @@ module.exports = {
 
       const embed = new EmbedBuilder()
         .setTitle('✅ Unregistered Successfully')
-        .setDescription(`You have been unregistered from the LeetCode tracking system.\n\n**Previous Registration:**\nDiscord: ${user.discord_username}\nLeetCode: ${user.leetcode_username}`)
+        .setDescription(`You have been unregistered from the LeetCode tracking system.\n\n**Previous Registration:**\nDisplay Name: ${user.display_name}\nLeetCode: ${user.leetcode_username}`)
         .setColor('#00ff00')
         .setTimestamp()
         .addFields({
@@ -40,14 +40,22 @@ module.exports = {
 
       await interaction.editReply({ embeds: [embed] });
 
-      console.log(`✅ User unregistered: ${user.discord_username} (${user.leetcode_username})`);
+      console.log(`✅ User unregistered: ${user.display_name} (${user.leetcode_username})`);
 
     } catch (error) {
       console.error('Error in unregister command:', error);
       
+      let errorMessage = 'An error occurred during unregistration. Please try again later.';
+      
+      if (error.message === 'User not found') {
+        errorMessage = 'You are not registered yet.';
+      } else if (error.message === 'No user was deleted') {
+        errorMessage = 'Failed to delete your registration. Please try again.';
+      }
+      
       const embed = new EmbedBuilder()
         .setTitle('❌ Unregistration Failed')
-        .setDescription('An error occurred during unregistration. Please try again later.')
+        .setDescription(errorMessage)
         .setColor('#ff0000')
         .setTimestamp();
 

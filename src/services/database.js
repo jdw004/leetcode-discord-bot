@@ -158,8 +158,21 @@ class Database {
 
   async deleteUser(discordId) {
     try {
+      // First check if user exists
+      const user = await this.getUserByDiscordId(discordId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Delete the user (weekly_stats will be cascaded automatically)
       const query = 'DELETE FROM users WHERE discord_id = $1';
-      await this.pool.query(query, [discordId]);
+      const result = await this.pool.query(query, [discordId]);
+      
+      if (result.rowCount === 0) {
+        throw new Error('No user was deleted');
+      }
+
+      console.log(`User deleted: ${user.display_name} (${user.leetcode_username})`);
     } catch (err) {
       console.error('Error deleting user:', err);
       throw err;
