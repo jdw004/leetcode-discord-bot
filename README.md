@@ -164,16 +164,6 @@ leetcodeDiscordBot/
 2. Export an object with `data` (SlashCommandBuilder) and `execute` function
 3. The bot will automatically load the command
 
-### Testing
-
-```bash
-# Run in development mode
-npm run dev
-
-# Test weekly update
-# Use /testupdate command in Discord (Admin only)
-```
-
 ## Troubleshooting
 
 ### Common Issues
