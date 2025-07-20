@@ -33,11 +33,14 @@ class WeeklyUpdate {
     console.log('🔄 Starting weekly update...');
 
     try {
+      console.log(`📢 Using channel ID: ${config.CHANNEL_ID}`);
       const channel = client.channels.cache.get(config.CHANNEL_ID);
       if (!channel) {
-        console.error('❌ Could not find Discord channel');
+        console.error(`❌ Could not find Discord channel with ID: ${config.CHANNEL_ID}`);
+        console.error('Available channels:', client.channels.cache.map(c => `${c.name} (${c.id})`).join(', '));
         return;
       }
+      console.log(`✅ Found channel: ${channel.name} (${channel.id})`);
 
       const users = await database.getAllActiveUsers();
       if (users.length === 0) {
