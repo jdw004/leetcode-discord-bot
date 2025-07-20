@@ -111,6 +111,8 @@ process.on('unhandledRejection', error => {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+console.log(`🔧 Setting up Express server on port ${PORT}`);
+
 // Mount the API
 app.use('/', createAPI());
 
@@ -119,6 +121,8 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 API Server running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`🔗 API base: http://localhost:${PORT}/api`);
+}).on('error', (error) => {
+  console.error(`❌ Failed to start API server:`, error);
 });
 
 // Login Discord bot
