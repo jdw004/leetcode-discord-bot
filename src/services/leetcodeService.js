@@ -64,24 +64,19 @@ class LeetCodeService {
 
   async fetchUserProfile(username) {
     try {
-      const response = await axios.post(this.apiUrl, {
-        query: query,
-        variables: { username: username }
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Referer': 'https://leetcode.com'
-        }
-      });
-
-      if (response.data.errors) {
-        throw new Error(response.data.errors[0].message);
+      const response = await axios.get(`${this.apiUrl}/user/${username}`);
+      
+      if (response.data.success) {
+        return {
+          success: true,
+          data: response.data.profile
+        };
+      } else {
+        return {
+          success: false,
+          error: response.data.error || 'Failed to fetch user profile'
+        };
       }
-
-      return {
-        success: true,
-        data: response.data.data
-      };
     } catch (error) {
       console.error(`Error fetching LeetCode data for ${username}:`, error.message);
       return {
@@ -93,6 +88,7 @@ class LeetCodeService {
 
   async getRecentProblems(username, days = 7) {
     try {
+      console.log(`📊 Service: Fetching recent problems for ${username} (${days} days)`);
       const response = await axios.get(`${this.apiUrl}/recent-problems/${username}?days=${days}`);
       
       if (response.data.success) {
@@ -100,7 +96,8 @@ class LeetCodeService {
           success: true,
           problems: response.data.problems,
           count: response.data.count,
-          username: username
+          username: username,
+          totalSolved: response.data.totalSolved
         };
       } else {
         return {
