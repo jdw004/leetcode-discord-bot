@@ -63,10 +63,11 @@ client.on('interactionCreate', async interaction => {
     const errorMessage = 'There was an error while executing this command!';
     
     try {
-      if (interaction.replied || interaction.deferred) {
-        await interaction.followUp({ content: errorMessage, ephemeral: true });
-      } else {
+      // Only try to respond if the interaction hasn't been handled yet
+      if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({ content: errorMessage, ephemeral: true });
+      } else if (interaction.deferred && !interaction.replied) {
+        await interaction.editReply({ content: errorMessage });
       }
     } catch (followUpError) {
       console.error('Error sending error message:', followUpError);

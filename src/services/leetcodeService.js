@@ -120,7 +120,7 @@ class LeetCodeService {
 
   async validateUser(username) {
     const result = await this.fetchUserProfile(username);
-    return result.success && result.data.matchedUser !== null;
+    return result.success && result.data && result.data.username === username;
   }
 
   formatData(data) {
