@@ -150,18 +150,28 @@ function createAPI() {
       cutoffDate.setDate(cutoffDate.getDate() - days);
       cutoffDate.setHours(0, 0, 0, 0);
       
-      const recentProblems = leetcodeData.recentSubmissions
+      // Get unique problems (not submissions) from the last N days
+      const uniqueProblems = new Map();
+      
+      leetcodeData.recentSubmissions
         .filter(submission => {
           const submissionDate = new Date(submission.timestamp * 1000);
           return submissionDate >= cutoffDate && submission.statusDisplay === 'Accepted';
         })
-        .map(submission => ({
-          id: submission.titleSlug,
-          title: submission.title,
-          difficulty: submission.difficulty || 'Unknown',
-          solvedAt: new Date(submission.timestamp * 1000).toISOString(),
-          language: submission.lang
-        }));
+        .forEach(submission => {
+          // Use titleSlug as unique key to avoid duplicates
+          if (!uniqueProblems.has(submission.titleSlug)) {
+            uniqueProblems.set(submission.titleSlug, {
+              id: submission.titleSlug,
+              title: submission.title,
+              difficulty: submission.difficulty || 'Unknown',
+              solvedAt: new Date(submission.timestamp * 1000).toISOString(),
+              language: submission.lang
+            });
+          }
+        });
+      
+      const recentProblems = Array.from(uniqueProblems.values());
       
       res.json({
         success: true,
