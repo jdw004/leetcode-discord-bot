@@ -2,6 +2,10 @@
 
 A Discord bot that integrates with the LeetCode backend to track user progress and send weekly updates. **Deployed on Heroku for 24/7 uptime.**
 
+![Bot in Action](docs/images/LeetcodeExample.png)
+
+*Screenshot showing the bot's weekly update feature in action*
+
 ## Features
 
 - 🤖 **Discord Integration**: Slash commands for user registration and management
