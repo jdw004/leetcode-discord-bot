@@ -38,8 +38,7 @@ class Database {
           discord_username TEXT NOT NULL,
           leetcode_username TEXT UNIQUE NOT NULL,
           registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
-          is_active BOOLEAN DEFAULT 1
+          last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `;
 
@@ -77,14 +76,18 @@ class Database {
   async registerUser(discordId, discordUsername, leetcodeUsername) {
     return new Promise((resolve, reject) => {
       const query = `
-        INSERT OR REPLACE INTO users (discord_id, discord_username, leetcode_username, last_updated)
+        INSERT INTO users (discord_id, discord_username, leetcode_username, last_updated)
         VALUES (?, ?, ?, CURRENT_TIMESTAMP)
       `;
       
       this.db.run(query, [discordId, discordUsername, leetcodeUsername], function(err) {
         if (err) {
-          console.error('Error registering user:', err);
-          reject(err);
+          if (err.code === 'SQLITE_CONSTRAINT') {
+            reject(new Error('This LeetCode username is already registered.'));
+          } else {
+            console.error('Error registering user:', err);
+            reject(err);
+          }
         } else {
           console.log(`User registered: ${discordUsername} -> ${leetcodeUsername}`);
           resolve({ id: this.lastID });
@@ -95,7 +98,7 @@ class Database {
 
   async getUserByDiscordId(discordId) {
     return new Promise((resolve, reject) => {
-      const query = 'SELECT * FROM users WHERE discord_id = ? AND is_active = 1';
+      const query = 'SELECT * FROM users WHERE discord_id = ?';
       
       this.db.get(query, [discordId], (err, row) => {
         if (err) {
@@ -110,7 +113,7 @@ class Database {
 
   async getUserByLeetcodeUsername(leetcodeUsername) {
     return new Promise((resolve, reject) => {
-      const query = 'SELECT * FROM users WHERE leetcode_username = ? AND is_active = 1';
+      const query = 'SELECT * FROM users WHERE leetcode_username = ?';
       
       this.db.get(query, [leetcodeUsername], (err, row) => {
         if (err) {
@@ -125,7 +128,7 @@ class Database {
 
   async getAllActiveUsers() {
     return new Promise((resolve, reject) => {
-      const query = 'SELECT * FROM users WHERE is_active = 1 ORDER BY registered_at DESC';
+      const query = 'SELECT * FROM users ORDER BY registered_at DESC';
       
       this.db.all(query, [], (err, rows) => {
         if (err) {
@@ -186,13 +189,13 @@ class Database {
     });
   }
 
-  async deactivateUser(discordId) {
+  async deleteUser(discordId) {
     return new Promise((resolve, reject) => {
-      const query = 'UPDATE users SET is_active = 0 WHERE discord_id = ?';
+      const query = 'DELETE FROM users WHERE discord_id = ?';
       
       this.db.run(query, [discordId], function(err) {
         if (err) {
-          console.error('Error deactivating user:', err);
+          console.error('Error deleting user:', err);
           reject(err);
         } else {
           resolve();

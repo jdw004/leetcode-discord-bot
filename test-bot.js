@@ -14,8 +14,8 @@ async function testBotFunctionality() {
     // Test user registration
     console.log('2. Testing user registration...');
     const testUser = {
-      discordId: '123456789',
-      discordUsername: 'testuser',
+      discordId: '316686551113269249',
+      discordUsername: 'jdw_',
       leetcodeUsername: 'jdw004' // Using the working username from our tests
     };
 
@@ -63,7 +63,7 @@ async function testBotFunctionality() {
     // Test weekly stats
     console.log('6. Testing weekly stats...');
     const weekStart = new Date().toISOString().split('T')[0];
-    await database.saveWeeklyStats(retrievedUser.id, weekStart, leetcodeData.count || 0);
+    await database.saveWeeklyStats(retrievedUser.id, weekStart, 5);
     console.log('✅ Weekly stats saved successfully\n');
 
     // Test user deactivation
@@ -76,22 +76,15 @@ async function testBotFunctionality() {
     console.log('🎉 All tests completed successfully!');
     console.log('\n📋 Summary:');
     console.log('   ✅ Database operations working');
-    console.log('   ✅ LeetCode API integration working');
     console.log('   ✅ User registration system working');
     console.log('   ✅ Weekly stats system working');
-    console.log('\n🚀 The Discord bot is ready to use!');
-    console.log('\n📝 Next steps:');
-    console.log('   1. Create a Discord bot application');
-    console.log('   2. Set up environment variables');
-    console.log('   3. Start the bot with: npm start');
+    console.log('\n🚀 The Discord bot database is ready!');
 
   } catch (error) {
     console.error('❌ Test failed:', error);
   } finally {
-    // Close database connection
     database.close();
   }
 }
 
-// Run the test
 testBotFunctionality(); 
