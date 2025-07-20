@@ -59,7 +59,7 @@ const query = `
 
 class LeetCodeService {
   constructor() {
-    this.apiUrl = 'https://leetcode.com/graphql';
+    this.apiUrl = config.LEETCODE_API_URL || 'http://localhost:3000/api';
   }
 
   async fetchUserProfile(username) {
@@ -92,33 +92,33 @@ class LeetCodeService {
   }
 
   async getRecentProblems(username, days = 7) {
-    const result = await this.fetchUserProfile(username);
-
-    if (!result.success) {
+    try {
+      const response = await axios.get(`${this.apiUrl}/recent-problems/${username}?days=${days}`);
+      
+      if (response.data.success) {
+        return {
+          success: true,
+          problems: response.data.problems,
+          count: response.data.count,
+          username: username
+        };
+      } else {
+        return {
+          success: false,
+          error: response.data.error || 'Failed to fetch recent problems',
+          problems: [],
+          count: 0
+        };
+      }
+    } catch (error) {
+      console.error(`Error fetching recent problems for ${username}:`, error.message);
       return {
         success: false,
-        error: result.error,
+        error: error.message,
         problems: [],
         count: 0
       };
     }
-
-    const recentSubmissions = result.data.recentSubmissionList || [];
-    const sevenDaysAgo = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60);
-
-    const recentProblems = recentSubmissions.filter(sub => 
-      sub.timestamp > sevenDaysAgo && sub.statusDisplay === 'Accepted'
-    );
-
-    // Remove duplicates
-    const uniqueProblems = [...new Map(recentProblems.map(item => [item['titleSlug'], item])).values()];
-
-    return {
-      success: true,
-      problems: uniqueProblems,
-      count: uniqueProblems.length,
-      username: username
-    };
   }
 
   async validateUser(username) {

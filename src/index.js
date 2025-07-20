@@ -1,8 +1,10 @@
 const { Client, GatewayIntentBits, Collection, EmbedBuilder } = require('discord.js');
+const express = require('express');
 const config = require('../config');
 const database = require('./services/database');
 const leetcodeService = require('./services/leetcodeService');
 const weeklyUpdate = require('./services/weeklyUpdate');
+const { createAPI } = require('./api');
 
 const client = new Client({
   intents: [
@@ -105,5 +107,23 @@ process.on('unhandledRejection', error => {
   console.error('Unhandled promise rejection:', error);
 });
 
-// Login
+// Create Express server for API
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+console.log(`🔧 Setting up Express server on port ${PORT}`);
+
+// Mount the API
+app.use('/', createAPI());
+
+// Start the server
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 API Server running on port ${PORT}`);
+  console.log(`📊 Health check: http://localhost:${PORT}/health`);
+  console.log(`🔗 API base: http://localhost:${PORT}/api`);
+}).on('error', (error) => {
+  console.error(`❌ Failed to start API server:`, error);
+});
+
+// Login Discord bot
 client.login(config.DISCORD_TOKEN); 
