@@ -28,13 +28,16 @@ Remove your registration from the tracking system.
 ### `/testupdate` (Admin only)
 Trigger a test weekly update for testing purposes.
 
+### '/admin-unregister' (Admin only)
+Delete unwanted users from the database.
+
 ## Setup
 
 ### Prerequisites
 
 1. **Discord Bot Token**: Create a Discord application and bot at [Discord Developer Portal](https://discord.com/developers/applications)
-2. **LeetCode Backend**: Ensure the LeetCode backend is running on `http://localhost:3000`
-3. **PostgreSQL Database**: Local PostgreSQL installation or Heroku Postgres addon
+2. **LeetCode Backend**: Ensure the LeetCode backend is running on `http://localhost:3000` or host
+3. **PostgreSQL Database**: Local PostgreSQL installation or hosted Postgres DB
 4. **Node.js**: Version 14 or higher
 
 ### Installation
@@ -52,7 +55,7 @@ Trigger a test weekly update for testing purposes.
    GUILD_ID=your_discord_server_id
    CHANNEL_ID=your_discord_channel_id
    LEETCODE_API_URL=http://localhost:3000/api
-   DATABASE_URL=postgresql://username:password@localhost:5432/leetcode_bot
+   DATABASE_URL=postgresql://username:password@localhost:xxxx/leetcode_bot
    WEEKLY_UPDATE_CRON=0 9 * * 1
    UPDATE_TIMEZONE=America/New_York
    ```
@@ -80,21 +83,6 @@ Trigger a test weekly update for testing purposes.
    - Enable Developer Mode in Discord
    - Right-click on your server and channel to copy IDs
 
-## Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DISCORD_TOKEN` | Discord bot token | Required |
-| `CLIENT_ID` | Discord application client ID | Required |
-| `GUILD_ID` | Discord server ID | Required |
-| `CHANNEL_ID` | Discord channel for weekly updates | Required |
-| `LEETCODE_API_URL` | LeetCode backend API URL | `http://example:xxxx/api` |
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://example:xxxx/` |
-| `WEEKLY_UPDATE_CRON` | Cron schedule for weekly updates | `0 9 * * 1` |
-| `UPDATE_TIMEZONE` | Timezone for updates | `America/New_York` |
-
 ## Weekly Update Format
 
 The bot sends weekly updates with:
@@ -119,7 +107,7 @@ leetcodeDiscordBot/
     │   ├── unregister.js
     │   └── testupdate.js
     └── services/           # Business logic
-        ├── database.js     # SQLite database operations
+        ├── database.js     # Postgres database operations
         ├── leetcodeService.js # LeetCode API integration
         └── weeklyUpdate.js # Weekly update logic
 ```
