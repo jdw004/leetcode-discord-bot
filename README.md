@@ -28,7 +28,7 @@ Remove your registration from the tracking system.
 ### `/testupdate` (Admin only)
 Trigger a test weekly update for testing purposes.
 
-### '/admin-unregister' (Admin only)
+### `/admin-unregister` (Admin only)
 Delete unwanted users from the database.
 
 ## Setup
