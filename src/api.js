@@ -30,7 +30,7 @@ const LEETCODE_QUERY = `
         }
       }
     }
-    recentSubmissionList(username: $username) {
+    recentSubmissionList(username: $username, limit: 150) {
       title
       titleSlug
       timestamp
@@ -150,13 +150,23 @@ function createAPI() {
       cutoffDate.setDate(cutoffDate.getDate() - days);
       cutoffDate.setHours(0, 0, 0, 0);
       
+      console.log(`📅 API: Cutoff date for ${username}: ${cutoffDate.toISOString()} (${days} days back from ${new Date().toISOString()})`);
+      
       // Get unique problems (not submissions) from the last N days
       const uniqueProblems = new Map();
       
+      // Process recent submissions
       leetcodeData.recentSubmissions
         .filter(submission => {
           const submissionDate = new Date(submission.timestamp * 1000);
-          return submissionDate >= cutoffDate && submission.statusDisplay === 'Accepted';
+          const isAccepted = submission.statusDisplay === 'Accepted';
+          const isRecent = submissionDate >= cutoffDate;
+          
+          if (isAccepted && isRecent) {
+            console.log(`✅ API: Including submission for ${username}: ${submission.title} at ${submissionDate.toISOString()}`);
+          }
+          
+          return isRecent && isAccepted;
         })
         .forEach(submission => {
           // Use titleSlug as unique key to avoid duplicates
@@ -173,13 +183,40 @@ function createAPI() {
       
       const recentProblems = Array.from(uniqueProblems.values());
       
+      // Also check submission calendar for validation
+      let calendarTotal = 0;
+      if (leetcodeData.submissionCalendar) {
+        const calendar = leetcodeData.submissionCalendar;
+        const cutoffTimestamp = Math.floor(cutoffDate.getTime() / 1000);
+        
+        // Sum up submissions from the calendar for the date range
+        Object.entries(calendar).forEach(([timestamp, count]) => {
+          if (parseInt(timestamp) >= cutoffTimestamp) {
+            calendarTotal += count;
+          }
+        });
+        
+        console.log(`📊 API: Submission calendar shows ${calendarTotal} total submissions for ${username} in the last ${days} days`);
+      }
+      
+      console.log(`📊 API: Found ${recentProblems.length} unique problems for ${username} in the last ${days} days`);
+      console.log(`📊 API: Recent submissions count: ${leetcodeData.recentSubmissions.length}`);
+      
+      // If we have significantly fewer problems than submissions, log a warning
+      if (recentProblems.length < Math.min(leetcodeData.recentSubmissions.length, 20) * 0.8) {
+        console.log(`⚠️ API: Warning - Found ${recentProblems.length} problems but ${leetcodeData.recentSubmissions.length} recent submissions for ${username}`);
+        console.log(`⚠️ API: This might indicate missing data due to the 100 submission limit`);
+      }
+      
       res.json({
         success: true,
         username: username,
         count: recentProblems.length,
         problems: recentProblems,
         period: `${days} days`,
-        totalSolved: leetcodeData.totalSolved
+        totalSolved: leetcodeData.totalSolved,
+        calendarSubmissions: calendarTotal,
+        recentSubmissionsCount: leetcodeData.recentSubmissions.length
       });
       
     } catch (error) {
@@ -187,6 +224,76 @@ function createAPI() {
       res.status(500).json({
         success: false,
         error: 'Failed to fetch recent problems',
+        message: error.message
+      });
+    }
+  });
+
+  // Get recent problems count using submission calendar (alternative method)
+  api.get('/api/recent-problems-calendar/:username', async (req, res) => {
+    try {
+      const { username } = req.params;
+      const days = req.query.days || 7;
+      
+      console.log(`📊 API: Fetching recent problems count via calendar for ${username} (${days} days)`);
+      
+      // Fetch real data from LeetCode GraphQL API
+      const leetcodeData = await fetchLeetCodeData(username);
+      
+      if (!leetcodeData) {
+        return res.status(404).json({
+          success: false,
+          error: 'User not found or error fetching data',
+          message: 'Could not fetch user data from LeetCode'
+        });
+      }
+      
+      // Calculate cutoff date
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - days);
+      cutoffDate.setHours(0, 0, 0, 0);
+      const cutoffTimestamp = Math.floor(cutoffDate.getTime() / 1000);
+      
+      console.log(`📅 API: Calendar cutoff timestamp for ${username}: ${cutoffTimestamp} (${cutoffDate.toISOString()})`);
+      
+      // Sum up submissions from the calendar for the date range
+      let totalSubmissions = 0;
+      let dailyBreakdown = [];
+      
+      if (leetcodeData.submissionCalendar) {
+        Object.entries(leetcodeData.submissionCalendar).forEach(([timestamp, count]) => {
+          if (parseInt(timestamp) >= cutoffTimestamp) {
+            totalSubmissions += count;
+            const date = new Date(parseInt(timestamp) * 1000);
+            dailyBreakdown.push({
+              date: date.toISOString().split('T')[0],
+              submissions: count,
+              timestamp: parseInt(timestamp)
+            });
+          }
+        });
+        
+        // Sort by date
+        dailyBreakdown.sort((a, b) => a.timestamp - b.timestamp);
+      }
+      
+      console.log(`📊 API: Calendar shows ${totalSubmissions} total submissions for ${username} in the last ${days} days`);
+      
+      res.json({
+        success: true,
+        username: username,
+        totalSubmissions: totalSubmissions,
+        dailyBreakdown: dailyBreakdown,
+        period: `${days} days`,
+        totalSolved: leetcodeData.totalSolved,
+        method: 'submission_calendar'
+      });
+      
+    } catch (error) {
+      console.error('❌ API Error fetching recent problems via calendar:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch recent problems via calendar',
         message: error.message
       });
     }

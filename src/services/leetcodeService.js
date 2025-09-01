@@ -29,7 +29,7 @@ const query = `
         }
       }
     }
-    recentSubmissionList(username: $username, limit: 20) {
+    recentSubmissionList(username: $username, limit: 100) {
       title
       titleSlug
       timestamp
@@ -97,7 +97,9 @@ class LeetCodeService {
           problems: response.data.problems,
           count: response.data.count,
           username: username,
-          totalSolved: response.data.totalSolved
+          totalSolved: response.data.totalSolved,
+          calendarSubmissions: response.data.calendarSubmissions,
+          recentSubmissionsCount: response.data.recentSubmissionsCount
         };
       } else {
         return {
